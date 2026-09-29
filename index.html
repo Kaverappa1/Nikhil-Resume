@@ -1,0 +1,2034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nikhil Kaverappa - Mainframe 3270 Terminal</title>
+  <meta name="description" content="Interactive 3D IBM Mainframe terminal workstation and 3270 CRT console portfolio for Nikhil Kaverappa N L, Mainframe Developer & BFSI Core Banking Specialist.">
+  <meta property="og:title" content="Nikhil Kaverappa - Mainframe 3270 Terminal">
+  <meta property="og:description" content="Interactive 3D IBM Mainframe terminal workstation and 3270 CRT console portfolio for Nikhil Kaverappa N L.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- Google Fonts: IBM Plex Mono & VT323 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,600;0,700;1,400&family=VT323&display=swap" rel="stylesheet">
+
+  <!-- Three.js & OrbitControls via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <style>
+    :root {
+      --color-phosphor: #00ff66;
+      --color-phosphor-dim: #00993d;
+      --color-phosphor-glow: rgba(0, 255, 102, 0.45);
+      --color-phosphor-bg: #030c06;
+      --color-phosphor-highlight: #66ff99;
+      --terminal-bezel: #1a1c1e;
+      --terminal-case: #121417;
+      --color-alert: #ff4d4d;
+      --color-warning: #ffb000;
+      --color-cyan: #00f0ff;
+    }
+
+    body[data-theme="amber"] {
+      --color-phosphor: #ffb000;
+      --color-phosphor-dim: #a67300;
+      --color-phosphor-glow: rgba(255, 176, 0, 0.45);
+      --color-phosphor-bg: #0f0a02;
+      --color-phosphor-highlight: #ffd166;
+    }
+
+    body[data-theme="cyan"] {
+      --color-phosphor: #00e5ff;
+      --color-phosphor-dim: #008fa0;
+      --color-phosphor-glow: rgba(0, 229, 255, 0.45);
+      --color-phosphor-bg: #020e14;
+      --color-phosphor-highlight: #80f2ff;
+    }
+
+    body[data-theme="white"] {
+      --color-phosphor: #e6edf3;
+      --color-phosphor-dim: #8b949e;
+      --color-phosphor-glow: rgba(230, 237, 243, 0.35);
+      --color-phosphor-bg: #080a0d;
+      --color-phosphor-highlight: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: text;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #050608;
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--color-phosphor);
+    }
+
+    #webgl-canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    #canvas3d {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* 3D Scene Controls HUD */
+    .viewport-hud {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .hud-badge {
+      pointer-events: auto;
+      background: rgba(10, 14, 18, 0.88);
+      border: 1px solid var(--color-phosphor-dim);
+      padding: 8px 14px;
+      border-radius: 4px;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(6px);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--color-phosphor);
+      box-shadow: 0 0 8px var(--color-phosphor);
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.85); }
+    }
+
+    .hud-rack-hint {
+      pointer-events: auto;
+      background: rgba(10, 14, 18, 0.82);
+      border: 1px dashed var(--color-phosphor-dim);
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 10px;
+      color: var(--color-phosphor-highlight);
+      max-width: 320px;
+      line-height: 1.4;
+    }
+
+    /* Top Right Global Actions */
+    .top-actions {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 10;
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-sys {
+      background: rgba(12, 16, 20, 0.9);
+      border: 1px solid var(--color-phosphor-dim);
+      color: var(--color-phosphor);
+      padding: 8px 14px;
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 600;
+      border-radius: 3px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .btn-sys:hover {
+      background: var(--color-phosphor);
+      color: #000;
+      border-color: var(--color-phosphor);
+      box-shadow: 0 0 12px var(--color-phosphor-glow);
+    }
+
+    .btn-sys.active {
+      background: var(--color-phosphor-dim);
+      color: #fff;
+    }
+
+    /* Main Terminal HUD Window / CRT Display */
+    .crt-workstation-container {
+      position: absolute;
+      z-index: 20;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Default HUD overlay mode (docked bottom-right or responsive desktop position) */
+    .crt-workstation-container.mode-hud {
+      bottom: 20px;
+      right: 20px;
+      width: min(840px, calc(100vw - 40px));
+      height: min(600px, calc(100vh - 90px));
+      box-shadow: 0 20px 50px rgba(0,0,0,0.85);
+    }
+
+    /* Maximized Fullscreen Terminal Mode */
+    .crt-workstation-container.mode-maximized {
+      top: 20px;
+      left: 20px;
+      right: 20px;
+      bottom: 20px;
+      width: calc(100vw - 40px);
+      height: calc(100vh - 40px);
+      box-shadow: 0 25px 60px rgba(0,0,0,0.95);
+    }
+
+    /* Minimized / Collapsed Mode */
+    .crt-workstation-container.mode-minimized {
+      bottom: 20px;
+      right: 20px;
+      width: 320px;
+      height: 44px;
+      overflow: hidden;
+    }
+
+    /* CRT Bezel Frame (IBM 3279 Industrial Bezel) */
+    .crt-bezel {
+      width: 100%;
+      height: 100%;
+      background: #171a1e;
+      border: 3px solid #282d34;
+      border-radius: 8px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 12px 35px rgba(0,0,0,0.9);
+    }
+
+    .crt-bezel-header {
+      height: 28px;
+      background: #0f1114;
+      border-bottom: 1px solid #22262d;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      font-size: 11px;
+      color: #8b949e;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .bezel-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ibm-logo {
+      color: #cbd5e1;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      border: 1px solid #475569;
+      padding: 1px 4px;
+      font-size: 9px;
+      border-radius: 2px;
+    }
+
+    .crt-window-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ctrl-icon-btn {
+      background: #1f242c;
+      border: 1px solid #333a46;
+      color: #94a3b8;
+      width: 22px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 2px;
+      font-size: 10px;
+      cursor: pointer;
+    }
+
+    .ctrl-icon-btn:hover {
+      background: var(--color-phosphor-dim);
+      color: #fff;
+    }
+
+    /* CRT Glass Screen */
+    .crt-screen {
+      position: relative;
+      flex: 1;
+      background-color: var(--color-phosphor-bg);
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.95);
+      border: 1px solid #1f2520;
+    }
+
+    /* Pure CSS Scanlines & CRT Distortion Bloom */
+    .crt-screen::before {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%);
+      background-size: 100% 4px;
+      z-index: 5;
+      pointer-events: none;
+      opacity: 0.75;
+    }
+
+    .crt-screen::after {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: radial-gradient(circle at center, transparent 65%, rgba(0, 0, 0, 0.7) 100%);
+      pointer-events: none;
+      z-index: 6;
+    }
+
+    /* Subtle Glass Glare Reflection */
+    .crt-glass-glare {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 45%;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0) 65%);
+      pointer-events: none;
+      z-index: 7;
+    }
+
+    /* CRT Inner Content */
+    .terminal-body {
+      position: relative;
+      z-index: 4;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 14px;
+      overflow-y: auto;
+      text-shadow: 0 0 5px var(--color-phosphor-glow);
+    }
+
+    /* 3270 Top System Header */
+    .ibm-3270-header {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--color-phosphor-dim);
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .ibm-3270-header .host-info {
+      color: var(--color-phosphor-highlight);
+    }
+
+    /* Function Key Nav Bar */
+    .fkey-nav-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed var(--color-phosphor-dim);
+    }
+
+    .fkey-btn {
+      background: rgba(0, 40, 16, 0.4);
+      border: 1px solid var(--color-phosphor-dim);
+      color: var(--color-phosphor);
+      padding: 4px 9px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.12s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    .fkey-btn:hover {
+      background: var(--color-phosphor);
+      color: #000;
+    }
+
+    .fkey-btn.active {
+      background: var(--color-phosphor);
+      color: #020c06;
+      font-weight: 700;
+      box-shadow: 0 0 10px var(--color-phosphor-glow);
+    }
+
+    .fkey-number {
+      opacity: 0.8;
+      font-size: 10px;
+      background: rgba(0,0,0,0.4);
+      padding: 1px 3px;
+      border-radius: 2px;
+    }
+
+    .fkey-btn.active .fkey-number {
+      background: #000;
+      color: var(--color-phosphor);
+    }
+
+    /* Terminal View Panels */
+    .terminal-view-panel {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .terminal-view-panel.active {
+      display: block;
+      animation: crtFadeIn 0.2s ease-out;
+    }
+
+    @keyframes crtFadeIn {
+      from { opacity: 0; transform: translateY(2px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Custom Scrollbar for Terminal */
+    .terminal-body::-webkit-scrollbar,
+    .terminal-view-panel::-webkit-scrollbar {
+      width: 6px;
+    }
+    .terminal-body::-webkit-scrollbar-track,
+    .terminal-view-panel::-webkit-scrollbar-track {
+      background: rgba(0, 20, 10, 0.6);
+    }
+    .terminal-body::-webkit-scrollbar-thumb,
+    .terminal-view-panel::-webkit-scrollbar-thumb {
+      background: var(--color-phosphor-dim);
+      border-radius: 2px;
+    }
+
+    /* View Specific Typography & Layouts */
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--color-phosphor-highlight);
+      border-left: 3px solid var(--color-phosphor);
+      padding-left: 8px;
+      letter-spacing: 0.05em;
+    }
+
+    .section-kicker {
+      font-size: 11px;
+      color: var(--color-phosphor-dim);
+      margin-bottom: 12px;
+    }
+
+    .ascii-banner {
+      font-family: 'VT323', monospace;
+      font-size: 15px;
+      line-height: 1.1;
+      margin-bottom: 12px;
+      white-space: pre;
+      color: var(--color-phosphor-highlight);
+    }
+
+    .card-terminal {
+      border: 1px solid var(--color-phosphor-dim);
+      background: rgba(0, 25, 10, 0.35);
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      border-radius: 2px;
+    }
+
+    .card-terminal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1px dashed var(--color-phosphor-dim);
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+    }
+
+    .role-title {
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--color-phosphor-highlight);
+    }
+
+    .company-title {
+      font-size: 12px;
+      color: var(--color-phosphor);
+    }
+
+    .duration-badge {
+      font-size: 11px;
+      color: var(--color-phosphor-dim);
+    }
+
+    .bullet-list {
+      list-style-type: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 11.5px;
+      line-height: 1.45;
+    }
+
+    .bullet-list li {
+      position: relative;
+      padding-left: 14px;
+    }
+
+    .bullet-list li::before {
+      content: ">";
+      position: absolute;
+      left: 0;
+      color: var(--color-phosphor-highlight);
+      font-weight: 700;
+    }
+
+    .highlight-bold {
+      font-weight: 700;
+      color: var(--color-phosphor-highlight);
+    }
+
+    /* Skills Grid */
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .skill-category-card {
+      border: 1px solid var(--color-phosphor-dim);
+      background: rgba(0, 25, 10, 0.25);
+      padding: 10px;
+    }
+
+    .skill-category-name {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--color-phosphor-highlight);
+      margin-bottom: 6px;
+      border-bottom: 1px dotted var(--color-phosphor-dim);
+      padding-bottom: 4px;
+    }
+
+    .skill-items-row {
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: var(--color-phosphor);
+    }
+
+    /* Datasets / Projects Table */
+    .ds-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+      margin-top: 6px;
+    }
+
+    .ds-table th {
+      text-align: left;
+      border-bottom: 1px solid var(--color-phosphor-dim);
+      padding: 4px 6px;
+      font-size: 10.5px;
+      color: var(--color-phosphor-highlight);
+      letter-spacing: 0.05em;
+    }
+
+    .ds-table td {
+      padding: 6px;
+      border-bottom: 1px dotted rgba(0, 255, 102, 0.15);
+      vertical-align: top;
+    }
+
+    .ds-row {
+      cursor: pointer;
+      transition: background 0.1s ease;
+    }
+
+    .ds-row:hover {
+      background: rgba(0, 255, 102, 0.12);
+    }
+
+    .ds-row.selected {
+      background: rgba(0, 255, 102, 0.22);
+    }
+
+    .ds-detail-box {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid var(--color-phosphor-highlight);
+      background: rgba(0, 20, 10, 0.6);
+      font-size: 11.5px;
+      line-height: 1.5;
+    }
+
+    /* RACF Auth Profile */
+    .racf-box {
+      border: 1px solid var(--color-phosphor);
+      background: rgba(0, 20, 8, 0.5);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .racf-field {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      margin-bottom: 8px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .racf-label {
+      color: var(--color-phosphor-dim);
+      font-weight: 600;
+    }
+
+    .racf-val {
+      color: var(--color-phosphor-highlight);
+      word-break: break-all;
+    }
+
+    .racf-val a {
+      color: var(--color-phosphor-highlight);
+      text-decoration: underline;
+    }
+    .racf-val a:hover {
+      color: #fff;
+    }
+
+    /* CLI Prompt at bottom of terminal */
+    .terminal-cli-bar {
+      margin-top: 8px;
+      border-top: 1px solid var(--color-phosphor-dim);
+      padding-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .cli-prefix {
+      color: var(--color-phosphor-highlight);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .cli-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--color-phosphor-highlight);
+      font-size: 12px;
+      text-transform: uppercase;
+      text-shadow: 0 0 6px var(--color-phosphor-glow);
+    }
+
+    .cli-feedback {
+      font-size: 11px;
+      color: var(--color-warning);
+      margin-top: 4px;
+      min-height: 16px;
+    }
+
+    /* 3270 Status line (Bottom) */
+    .ibm-3270-footer {
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid #1a2e20;
+      margin-top: 4px;
+      padding-top: 4px;
+      font-size: 10px;
+      color: var(--color-phosphor-dim);
+      letter-spacing: 0.08em;
+    }
+
+    .sys-indicator {
+      display: flex;
+      gap: 12px;
+    }
+
+    .status-ok {
+      color: var(--color-phosphor);
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+      .crt-workstation-container.mode-hud {
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+        width: calc(100vw - 20px);
+        height: 75vh;
+      }
+      .ibm-3270-header {
+        font-size: 10px;
+      }
+      .fkey-btn {
+        font-size: 10px;
+        padding: 3px 6px;
+      }
+      .racf-field {
+        grid-template-columns: 100px 1fr;
+      }
+    }
+  </style>
+</head>
+<body data-theme="green">
+
+  <!-- 3D WebGL Canvas Layer -->
+  <div id="webgl-canvas-container">
+    <canvas id="canvas3d"></canvas>
+  </div>
+
+  <!-- HUD: System & Camera Controls -->
+  <div class="viewport-hud">
+    <div class="hud-badge">
+      <div class="pulse-dot"></div>
+      <span>MAINFRAME Z16 ARCHITECTURE // NODE-01 ACTIVE</span>
+    </div>
+    <div class="hud-rack-hint" id="hudInteractiveHint">
+      💡 TIP: Drag to orbit scene. Click server racks in 3D or function keys [F3–F8] below to load partitions.
+    </div>
+  </div>
+
+  <!-- Top Right Quick Access Controls -->
+  <div class="top-actions">
+    <button class="btn-sys" id="btnThemeToggle" title="Cycle Terminal Color (Green, Amber, Cyan, White)">
+      <span>COLOR:</span>
+      <span id="themeLabel">P39 GREEN</span>
+    </button>
+    <button class="btn-sys" id="btnAudioToggle" title="Toggle Terminal Audio Synth">
+      <span id="audioIcon">🔊</span>
+      <span id="audioLabel">AUDIO: ON</span>
+    </button>
+    <button class="btn-sys" id="btnCameraReset" title="Reset 3D Room Camera View">
+      <span>CAM RESET</span>
+    </button>
+    <button class="btn-sys" id="btnModeToggle" title="Toggle Fullscreen CRT / 3D Room Mode">
+      <span id="viewModeLabel">FULL TERMINAL</span>
+    </button>
+  </div>
+
+  <!-- Interactive IBM 3270 CRT Workstation HUD -->
+  <div class="crt-workstation-container mode-hud" id="crtContainer">
+    <div class="crt-bezel">
+      <!-- CRT Bezel Header -->
+      <div class="crt-bezel-header">
+        <div class="bezel-badge">
+          <span class="ibm-logo">IBM</span>
+          <span>3279 COLOR DISPLAY STATION // SYS ID: ANZ-BFSI-01</span>
+        </div>
+        <div class="crt-window-controls">
+          <button class="ctrl-icon-btn" id="btnMinimize" title="Minimize / Restore HUD">_</button>
+          <button class="ctrl-icon-btn" id="btnMaximize" title="Maximize Fullscreen CRT">□</button>
+        </div>
+      </div>
+
+      <!-- CRT Glass Display Screen with Scanline Overlays -->
+      <div class="crt-screen">
+        <div class="crt-glass-glare"></div>
+
+        <div class="terminal-body" id="terminalBody">
+          <!-- 3270 Top Information Bar -->
+          <div class="ibm-3270-header">
+            <span class="host-info">TSO/ISPF V2.4 -- ANZ PRODUCTION WORKSPACE</span>
+            <span>TIME: <span id="clockDisplay">06:30:00</span></span>
+            <span>USER: NIKHIL (SYS_ADMIN)</span>
+          </div>
+
+          <!-- Function Key Navigation Bar -->
+          <div class="fkey-nav-bar" id="fkeyBar">
+            <button class="fkey-btn active" data-view="view-summary">
+              <span class="fkey-number">F1</span>
+              <span>SYS_SUM</span>
+            </button>
+            <button class="fkey-btn" data-view="view-experience">
+              <span class="fkey-number">F3</span>
+              <span>SYS_LOG (EXP)</span>
+            </button>
+            <button class="fkey-btn" data-view="view-projects">
+              <span class="fkey-number">F4</span>
+              <span>DS_LIST (PROJ)</span>
+            </button>
+            <button class="fkey-btn" data-view="view-skills">
+              <span class="fkey-number">F5</span>
+              <span>CONFIG (SKILLS)</span>
+            </button>
+            <button class="fkey-btn" data-view="view-contact">
+              <span class="fkey-number">F6</span>
+              <span>RACF_AUTH</span>
+            </button>
+            <button class="fkey-btn" data-view="view-education">
+              <span class="fkey-number">F7</span>
+              <span>EDU_CERT</span>
+            </button>
+            <button class="fkey-btn" data-view="view-ipl">
+              <span class="fkey-number">F8</span>
+              <span>IPL_BOOT</span>
+            </button>
+          </div>
+
+          <!-- VIEW 1: SYS_SUM (Professional Summary & Identity) -->
+          <div class="terminal-view-panel active" id="view-summary">
+            <div class="ascii-banner">
+███╗   ██╗██╗██╗  ██╗██╗  ██╗██╗██╗     ██╗  ██╗ █████╗ ██╗   ██╗███████╗██████╗ ██████╗  █████╗ 
+████╗  ██║██║██║ ██╔╝██║  ██║██║██║     ██║ ██╔╝██╔══██╗██║   ██║██╔════╝██╔══██╗██╔══██╗██╔══██╗
+██╔██╗ ██║██║█████╔╝ ███████║██║██║     █████╔╝ ███████║██║   ██║█████╗  ██████╔╝██████╔╝███████║
+██║╚██╗██║██║██╔═██╗ ██╔══██║██║██║     ██╔═██╗ ██╔══██║╚██╗ ██╔╝██╔══╝  ██╔══██╗██╔═══╝ ██╔══██║
+██║ ╚████║██║██║  ██╗██║  ██║██║███████╗██║  ██╗██║  ██║ ╚████╔╝ ███████╗██║  ██║██║     ██║  ██║
+            </div>
+            <div class="section-title">NIKHIL KAVERAPPA N L // OPERATING SYSTEM IDENTITY</div>
+            <div class="section-kicker">MAINFRAME DEVELOPER • BFSI CORE BANKING SPECIALIST | BENGALURU, INDIA</div>
+
+            <div class="card-terminal">
+              <div class="role-title">HOST OVERVIEW // PROFESSIONAL PROFILE</div>
+              <p style="margin-top: 8px; line-height: 1.6; font-size: 12px;" id="textSummary"></p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 8px;">
+              <div class="card-terminal">
+                <div class="highlight-bold">DOMAIN EXPERTISE</div>
+                <div style="font-size: 11px; margin-top: 4px; color: var(--color-phosphor-dim);">
+                  BFSI, Core Banking, Debit Cards Lifecycle, Payment Processing, Loans & Cash Pooling
+                </div>
+              </div>
+              <div class="card-terminal">
+                <div class="highlight-bold">MISSION TRACK RECORD</div>
+                <div style="font-size: 11px; margin-top: 4px; color: var(--color-phosphor-dim);">
+                  4M+ Customer Migration, Zero Production Incidents, Splunk Telemetry, MQ-API Subsystems
+                </div>
+              </div>
+              <div class="card-terminal">
+                <div class="highlight-bold">ENTERPRISE STACK</div>
+                <div style="font-size: 11px; margin-top: 4px; color: var(--color-phosphor-dim);">
+                  COBOL, JCL, DB2, IMS DB/DC, VSAM, Hogan (FPS/PCD), CICS, IBM MQ, IDz, Git
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- VIEW 2: SYS_LOG (Professional Experience) -->
+          <div class="terminal-view-panel" id="view-experience">
+            <div class="section-title">DSN: ANZ.BFSI.CAREER.LOG // PROFESSIONAL EXPERIENCE</div>
+            <div class="section-kicker">TIER-1 PRODUCTION & MODERNIZATION HISTORY (ISPF BROWSE MODE)</div>
+            <div id="experienceContainer"></div>
+          </div>
+
+          <!-- VIEW 3: DS_LIST (Projects & Key Initiatives) -->
+          <div class="terminal-view-panel" id="view-projects">
+            <div class="section-title">ISPF OPTION 3.4 // DATA SET LIST UTILITY (FLAGSHIP INITIATIVES)</div>
+            <div class="section-kicker">SELECT ANY DATASET MEMBER BELOW TO DISPLAY TECHNICAL ARCHITECTURE & IMPACT:</div>
+            
+            <table class="ds-table">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">ACT</th>
+                  <th>DATA SET NAME / INITIATIVE</th>
+                  <th>SUBSYSTEM</th>
+                  <th>STATUS</th>
+                  <th>IMPACT / SCALE</th>
+                </tr>
+              </thead>
+              <tbody id="datasetTableBody"></tbody>
+            </table>
+
+            <div class="ds-detail-box" id="projectDetailBox">
+              <div class="highlight-bold" id="projDetailTitle">SELECT A RECORD TO INSPECT ARCHITECTURAL SPECIFICATION</div>
+              <div id="projDetailContent" style="margin-top: 6px; color: var(--color-phosphor);">
+                Click on any project dataset row above to inspect the COBOL, JCL, DB2, and Hogan implementation details.
+              </div>
+            </div>
+          </div>
+
+          <!-- VIEW 4: CONFIG (Technical Skills) -->
+          <div class="terminal-view-panel" id="view-skills">
+            <div class="section-title">SYS1.PARMLIB(CONFIG) // TECHNICAL CAPABILITIES</div>
+            <div class="section-kicker">MAINFRAME ARCHITECTURE, DATA STORES, UTILITIES & MODERN TOOLING</div>
+            <div class="skills-grid" id="skillsGridContainer"></div>
+          </div>
+
+          <!-- VIEW 5: RACF_AUTH (Contact / Clearance Profile) -->
+          <div class="terminal-view-panel" id="view-contact">
+            <div class="section-title">RACF SECURITY FACILITY // USER CLEARANCE & COMMUNICATION</div>
+            <div class="section-kicker">USERID: NIKHIL | SECURITY LEVEL: BFSI CORE-BANKING VERIFIED</div>
+
+            <div class="racf-box">
+              <div class="racf-field">
+                <span class="racf-label">USERID:</span>
+                <span class="racf-val">NIKHIL KAVERAPPA N L</span>
+              </div>
+              <div class="racf-field">
+                <span class="racf-label">DESIGNATION:</span>
+                <span class="racf-val">Software Engineer (Mainframe Developer • BFSI Specialist)</span>
+              </div>
+              <div class="racf-field">
+                <span class="racf-label">CURRENT HOST:</span>
+                <span class="racf-val">ANZ Operations and Technology, Bengaluru, India</span>
+              </div>
+              <div class="racf-field">
+                <span class="racf-label">EMAIL DSN:</span>
+                <span class="racf-val">
+                  <a href="mailto:nikhil.kaverappa111@gmail.com">nikhil.kaverappa111@gmail.com</a>
+                  <button class="btn-sys" style="display:inline; padding: 2px 6px; margin-left: 8px; font-size: 10px;" onclick="copyToClipboard('nikhil.kaverappa111@gmail.com')">COPY</button>
+                </span>
+              </div>
+              <div class="racf-field">
+                <span class="racf-label">TELECOMM LINE:</span>
+                <span class="racf-val">
+                  <a href="tel:+919742202701">+91-9742202701</a>
+                  <button class="btn-sys" style="display:inline; padding: 2px 6px; margin-left: 8px; font-size: 10px;" onclick="copyToClipboard('+919742202701')">COPY</button>
+                </span>
+              </div>
+              <div class="racf-field">
+                <span class="racf-label">LINKEDIN VTAM:</span>
+                <span class="racf-val">
+                  <a href="https://linkedin.com/in/nikhilkaverappa-875176140" target="_blank" rel="noopener noreferrer">linkedin.com/in/nikhilkaverappa-875176140 ↗</a>
+                </span>
+              </div>
+              <div class="racf-field">
+                <span class="racf-label">GEOGRAPHIC REGION:</span>
+                <span class="racf-val">Bengaluru, Karnataka, India</span>
+              </div>
+              <div class="racf-field">
+                <span class="racf-label">RACF ACCESS:</span>
+                <span class="racf-val" style="color: var(--color-phosphor-highlight);">LEVEL-0 PRIVILEGED (CORE LEDGERS, CARD REPLATFORMING, BATCH CYCLES)</span>
+              </div>
+            </div>
+
+            <!-- Terminal Direct Dispatch Message Form -->
+            <div class="card-terminal">
+              <div class="role-title">TRANSMIT TERMINAL MESSAGE // DIRECT CONTACT DISPATCH</div>
+              <form id="contactDispatchForm" onsubmit="handleDispatchMessage(event)" style="margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                  <input type="text" id="senderName" placeholder="SENDER_NAME" required style="background: rgba(0,0,0,0.5); border: 1px solid var(--color-phosphor-dim); color: var(--color-phosphor); padding: 6px 8px; font-family: inherit; font-size: 11px;">
+                  <input type="email" id="senderEmail" placeholder="SENDER_EMAIL" required style="background: rgba(0,0,0,0.5); border: 1px solid var(--color-phosphor-dim); color: var(--color-phosphor); padding: 6px 8px; font-family: inherit; font-size: 11px;">
+                </div>
+                <textarea id="senderMsg" rows="3" placeholder="TYPE ENTERPRISE INQUIRY OR COLLABORATION MESSAGE..." required style="background: rgba(0,0,0,0.5); border: 1px solid var(--color-phosphor-dim); color: var(--color-phosphor); padding: 6px 8px; font-family: inherit; font-size: 11px; resize: none;"></textarea>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span id="dispatchStatus" style="font-size: 11px; color: var(--color-phosphor-highlight);"></span>
+                  <button type="submit" class="btn-sys" style="padding: 6px 14px;">TRANSMIT TO NIKHIL ↵</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- VIEW 6: EDU_CERT (Education & Certifications) -->
+          <div class="terminal-view-panel" id="view-education">
+            <div class="section-title">SYS_ACADEMICS // EDUCATION & CREDENTIALS</div>
+            <div class="section-kicker">ACADEMIC FOUNDATIONS & INDUSTRY ACCREDITATIONS</div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+              <div class="card-terminal">
+                <div class="role-title">BACHELOR OF ENGINEERING (BE)</div>
+                <div class="company-title" style="margin-top: 4px;">Automobile Engineering</div>
+                <div style="font-size: 11.5px; margin-top: 6px; color: var(--color-phosphor-highlight);">
+                  Acharya Institute of Technology, Bengaluru
+                </div>
+                <div class="duration-badge" style="margin-top: 4px;">Graduated: 2020 • Cumulative CGPA: 8.7 / 10.0</div>
+              </div>
+
+              <div class="card-terminal">
+                <div class="role-title">PRE-UNIVERSITY COURSE (PUC)</div>
+                <div class="company-title" style="margin-top: 4px;">Science Stream</div>
+                <div style="font-size: 11.5px; margin-top: 6px; color: var(--color-phosphor-highlight);">
+                  Jawahar Navodaya Vidyalaya, Kodagu
+                </div>
+                <div class="duration-badge" style="margin-top: 4px;">Completed: 2016 • Aggregate: 83%</div>
+              </div>
+            </div>
+
+            <div class="section-title" style="margin-top: 14px;">PROFESSIONAL CERTIFICATIONS & TRAINING</div>
+            <div class="card-terminal">
+              <ul class="bullet-list" style="margin-top: 4px;">
+                <li><span class="highlight-bold">The Complete Mainframe Professional Course</span> – Udemy</li>
+                <li><span class="highlight-bold">Mainframe: Complete JCL Course</span> – Udemy</li>
+                <li><span class="highlight-bold">COBOL Essential Training</span> – LinkedIn Learning</li>
+                <li><span class="highlight-bold">AWS Essentials</span> – Professional Credential</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- VIEW 7: IPL_BOOT (Interactive System Boot & Diagnostics) -->
+          <div class="terminal-view-panel" id="view-ipl">
+            <div class="section-title">INITIAL PROGRAM LOAD (IPL) // SYSTEM DIAGNOSTIC TRACE</div>
+            <div class="section-kicker">Z/OS SYSTEM SUBSYSTEM SEQUENCING & HARDWARE INITIALIZATION</div>
+            
+            <div style="background: rgba(0,10,5,0.7); border: 1px solid var(--color-phosphor-dim); padding: 10px; font-size: 11px; line-height: 1.45; max-height: 320px; overflow-y: auto;" id="iplLogBox">
+            </div>
+            <div style="margin-top: 8px; display: flex; gap: 8px;">
+              <button class="btn-sys" onclick="runIplSequence()">RE-TRIGGER SYSTEM IPL ↵</button>
+              <button class="btn-sys" onclick="clearIplLog()">CLEAR TRACE</button>
+            </div>
+          </div>
+
+          <!-- Bottom Interactive Command Line Bar -->
+          <div class="terminal-cli-bar">
+            <span class="cli-prefix">COMMAND ===></span>
+            <input type="text" class="cli-input" id="cliInputField" placeholder="TYPE COMMAND (HELP, EXP, PROJ, SKILLS, CONTACT, THEME AMBER, AUDIO OFF)..." autocomplete="off" spellcheck="false">
+          </div>
+          <div class="cli-feedback" id="cliFeedbackLine"></div>
+
+          <!-- 3270 Hardware Status Line -->
+          <div class="ibm-3270-footer">
+            <div class="sys-indicator">
+              <span>SYS: <span class="status-ok">ONLINE</span></span>
+              <span>DEV: <span class="status-ok">3278-2</span></span>
+              <span>COMM: <span class="status-ok">VTAM-ACTIVE</span></span>
+              <span>SPEED: <span>100 Gbps</span></span>
+            </div>
+            <div>
+              <span>PRESS F1-F8 OR ENTER COMMAND</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMBEDDED RESUME JSON & APPLICATION LOGIC -->
+  <script>
+    // ==========================================
+    // 1. EMBEDDED RESUME JSON DATA (Full OCR Data)
+    // ==========================================
+    const RESUME_DATA = {
+      personalInfo: {
+        name: "NIKHIL KAVERAPPA N L",
+        title: "MAINFRAME DEVELOPER • BFSI CORE BANKING SPECIALIST",
+        location: "Bengaluru, Karnataka, India",
+        phone: "+91-9742202701",
+        email: "nikhil.kaverappa111@gmail.com",
+        linkedin: "linkedin.com/in/nikhilkaverappa-875176140",
+        linkedinUrl: "https://linkedin.com/in/nikhilkaverappa-875176140"
+      },
+      summary: "Mainframe Developer with extensive experience in core development, application modernization, batch/online optimization, and tier-1 production support within the Banking & Financial Services (BFSI) domain. Deep expertise across IBM Mainframe architecture including COBOL, JCL, DB2, IMS DB/DC, VSAM, Hogan, CICS, and IBM MQ, integrated with modern toolchains (IDz, Git/GitHub). Demonstrated track record leading mission-critical debit card lifecycle initiatives, including product decommissioning, bank acquisition portfolio migrations for over 4 million customers with zero production incidents, API-MQ transaction processing, and observability enablement via Splunk.",
+      technicalSkills: {
+        "Mainframe Technologies": ["COBOL", "Micro Focus COBOL", "JCL", "Hogan Core Banking (FPS, PCD)", "CICS", "VSAM", "IBM MQ", "IMS DB/DC"],
+        "Databases & Query Tools": ["DB2 for z/OS", "IMS DB", "IBM SPUFI", "SQL", "QMF"],
+        "Schedulers & Utilities": ["Control-M", "CA7", "File-Aid", "TSO/ISPF", "IDCAMS", "SyncSort/DFSORT"],
+        "Modern Toolchains & Monitoring": ["IBM IDz", "Git", "GitHub", "Splunk", "Endevor", "JIRA"],
+        "Domain Knowledge": ["Core Banking", "Debit Cards Lifecycle", "Payment Processing", "Loans & Cash Pooling", "System Upstream/Downstream Integration"],
+        "Methodologies": ["Agile (Scrum/Kanban)", "Incident & Problem Management", "Release Governance", "Testing Automation"]
+      },
+      experience: [
+        {
+          company: "ANZ OPERATIONS AND TECHNOLOGY",
+          location: "Bengaluru, India",
+          role: "Software Engineer",
+          duration: "2023 – Present",
+          highlights: [
+            {
+              title: "End-to-End Product Decommissioning",
+              detail: "Spearheaded the end-to-end decommissioning of a legacy debit card product line; analyzed technical impacts across multiple upstream and downstream systems, designed architectural specifications, and modified COBOL programs, JCL batch streams, DB2 tables, IMS databases, and Hogan FPS entries via IDz and Git."
+            },
+            {
+              title: "Testing & Incident-Free Release",
+              detail: "Authored and executed comprehensive progression and regression test suites across online and batch cycles, verifying zero impact on active card products and successfully moving the release into production with zero incidents."
+            },
+            {
+              title: "Bank Acquisition & Card Migration",
+              detail: "Developed core migration logic for newly acquired bank debit cards into ANZ ecosystem; executed COBOL, JCL, DB2, and IMS alterations to seamlessly onboard customer portfolios and orchestrate automated PIN mailer dispatch workflows."
+            },
+            {
+              title: "Observability & Splunk Streaming",
+              detail: "Engineered centralized logging mechanisms for inbound and outbound REST APIs and IBM MQ interfaces by refactoring COBOL modules and Hogan components to stream transaction telemetry into Splunk for accelerated audit and triage."
+            },
+            {
+              title: "Portfolio-Scale Migration",
+              detail: "Led core development streams under the Bank-Led Migration program, successfully directing debit card account migration for 4 million+ customers while maintaining a 99.9% success rate."
+            },
+            {
+              title: "High-Throughput API & MQ Integration",
+              detail: "Architected and delivered API solutions coupled with IBM MQ middleware to perform reliable, low-latency DB2 updates, enhancing data integrity across core banking ledgers."
+            },
+            {
+              title: "Hogan Core Optimization",
+              detail: "Refactored backend COBOL programs and Hogan PCD entries across continuous Agile sprints, streamlining batch job execution and eliminating manual system touchpoints by 15%."
+            },
+            {
+              title: "Card Fulfillment Re-Platforming",
+              detail: "Modernized card dispatch operations from branch pickup to direct mailer address by updating Micro Focus COBOL routines and Hogan PCD configurations for 400,000+ accounts with 99% address update accuracy."
+            },
+            {
+              title: "Batch Cycle Automation",
+              detail: "Developed and tuned automated JCL batch job streams, reducing scheduled production run-times and cutting operational manual intervention by 20%."
+            },
+            {
+              title: "Compliance & Security Validation",
+              detail: "Eliminated legacy physical PIN mailers for newly issued cards by designing Hogan COBOL validation rules and updated PCD components, ensuring 100% regulatory compliance."
+            }
+          ]
+        },
+        {
+          company: "TATA CONSULTANCY SERVICES",
+          location: "Bengaluru, India",
+          role: "Software Engineer",
+          duration: "2021 – 2022",
+          highlights: [
+            {
+              title: "Core Banking Operations & Support",
+              detail: "Provided L2/L3 production maintenance and development support using COBOL, JCL, DB2, and IMS for a major Nordic bank's Loans and Cash Pooling core portfolios."
+            },
+            {
+              title: "Central Bank Interest Rate Revaluation",
+              detail: "Engineered and executed complex batch JCL runs to adjust dynamic interest rate parameters for 1M+ accounts in response to Central Bank rate revisions, reducing customer queries by 30%."
+            },
+            {
+              title: "Production Incident Management",
+              detail: "Triaged and resolved critical batch abends, transactional lockouts, and online processing defects within strict SLA thresholds."
+            },
+            {
+              title: "Performance Tuning",
+              detail: "Optimized long-running COBOL programs and DB2 cursor queries, significantly reducing CPU utilization and ensuring completion within night batch processing windows."
+            }
+          ]
+        }
+      ],
+      datasets: [
+        {
+          dsn: "ANZ.MIGRATION.BANKLED.P4M",
+          subsys: "COBOL/DB2/HOGAN",
+          status: "PROD_ACTIVE",
+          impact: "4,000,000+ Customers (99.9% Success)",
+          title: "Bank-Led Debit Card Portfolio Migration (4M+ Customers)",
+          spec: "Directed mission-critical core development streams migrating over 4 million acquired bank debit card accounts into ANZ's core banking ecosystem. Engineered COBOL algorithms, JCL workflows, DB2 relational structures, and IMS hierarchic transformations with automated PIN mailer orchestration."
+        },
+        {
+          dsn: "ANZ.CARD.DECOM.LEGACY.FPS",
+          subsys: "HOGAN FPS/PCD",
+          status: "DECOMMISSIONED",
+          impact: "Zero Incidents / Zero Impact",
+          title: "End-to-End Debit Card Product Line Decommissioning",
+          spec: "Analyzed deep multi-tier upstream and downstream impacts across the enterprise. Deprecated and refactored COBOL programs, batch JCL streams, DB2 schemas, and Hogan Financial Processing System (FPS) entries via IBM IDz and Git."
+        },
+        {
+          dsn: "ANZ.TELEMETRY.SPLUNK.MQ",
+          subsys: "REST/MQ/SPLUNK",
+          status: "STREAMING",
+          impact: "Real-time Triage & Accelerated Audit",
+          title: "Observability & Splunk Telemetry Streaming Engine",
+          spec: "Engineered centralized observability pipelines for inbound and outbound REST APIs and IBM MQ interfaces. Refactored COBOL and Hogan PCD modules to emit standardized transaction telemetry directly into Splunk."
+        },
+        {
+          dsn: "ANZ.FULFILL.REPLAT.PCD400K",
+          subsys: "MICRO FOCUS COBOL",
+          status: "COMPLETED",
+          impact: "400,000+ Accounts / 99% Accuracy",
+          title: "Card Fulfillment Dispatch Modernization",
+          spec: "Transformed branch card pickup logistics into an automated direct-mailer model by revising Micro Focus COBOL routines and Hogan PCD component configurations for 400,000+ customer accounts."
+        },
+        {
+          dsn: "TCS.NORDIC.LOANS.CASHPOL",
+          subsys: "COBOL/IMS/DB2",
+          status: "ARCHIVED",
+          impact: "L2/L3 Tier-1 SLA Adherence",
+          title: "Major Nordic Bank Loans & Cash Pooling Core Support",
+          spec: "Delivered 24/7 L2/L3 production maintenance, resolving critical abends, transactional concurrency lockouts, and online IMS DC defects for cross-border corporate loans and cash pooling pools."
+        },
+        {
+          dsn: "TCS.RATE.REVAL.1M.JCL",
+          subsys: "JCL/SQL/BATCH",
+          status: "SUCCESSFUL",
+          impact: "-30% Customer Inquiries / 1M+ Accts",
+          title: "Central Bank Interest Rate Dynamic Revaluation",
+          spec: "Engineered high-concurrency batch JCL jobs implementing dynamic interest rate adjustments for 1M+ customer accounts following European Central Bank benchmark rate updates."
+        }
+      ],
+      education: [
+        {
+          degree: "Bachelor of Engineering (BE) • Automobile",
+          institution: "Acharya Institute of Technology, Bengaluru",
+          year: "Graduated: 2020",
+          score: "CGPA: 8.7 / 10.0"
+        },
+        {
+          degree: "Pre-University Course (PUC) • Science",
+          institution: "Jawahar Navodaya Vidyalaya, Kodagu",
+          year: "Completed: 2016",
+          score: "Aggregate: 83%"
+        }
+      ],
+      certifications: [
+        "The Complete Mainframe Professional Course – Udemy",
+        "Mainframe: Complete JCL Course – Udemy",
+        "COBOL Essential Training – LinkedIn Learning",
+        "AWS Essentials – Professional Credential"
+      ]
+    };
+
+    // ==========================================
+    // 2. SYNTHESIZED RETRO AUDIO (Web Audio API)
+    // ==========================================
+    class RetroAudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playKeyClick() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(1200 + Math.random() * 400, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 0.035);
+
+        gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.035);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.04);
+      }
+
+      playDiskSeek() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const count = 3;
+        for (let i = 0; i < count; i++) {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          const t = this.ctx.currentTime + (i * 0.04);
+          osc.frequency.setValueAtTime(450 + Math.random() * 200, t);
+          osc.frequency.linearRampToValueAtTime(150, t + 0.025);
+
+          gain.gain.setValueAtTime(0.04, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.025);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.03);
+        }
+      }
+
+      playTerminalBell() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, this.ctx.currentTime);
+
+        gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.36);
+      }
+    }
+
+    const audioEngine = new RetroAudioEngine();
+
+    // ==========================================
+    // 3. UI RENDERING & TAB LOGIC
+    // ==========================================
+    function initializeTerminalContent() {
+      // 1. Professional Summary
+      document.getElementById('textSummary').innerText = RESUME_DATA.summary;
+
+      // 2. Experience Panel
+      const expContainer = document.getElementById('experienceContainer');
+      expContainer.innerHTML = '';
+      RESUME_DATA.experience.forEach((job) => {
+        const jobCard = document.createElement('div');
+        jobCard.className = 'card-terminal';
+        
+        let bulletsHtml = job.highlights.map(h => `
+          <li><span class="highlight-bold">${h.title}:</span> ${h.detail}</li>
+        `).join('');
+
+        jobCard.innerHTML = `
+          <div class="card-terminal-header">
+            <div>
+              <div class="role-title">${job.role}</div>
+              <div class="company-title">${job.company} — ${job.location}</div>
+            </div>
+            <div class="duration-badge">${job.duration}</div>
+          </div>
+          <ul class="bullet-list">${bulletsHtml}</ul>
+        `;
+        expContainer.appendChild(jobCard);
+      });
+
+      // 3. Datasets Table (Projects)
+      const dsTable = document.getElementById('datasetTableBody');
+      dsTable.innerHTML = '';
+      RESUME_DATA.datasets.forEach((ds, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'ds-row' + (idx === 0 ? ' selected' : '');
+        tr.dataset.idx = idx;
+        tr.innerHTML = `
+          <td style="color: var(--color-phosphor-highlight);">[S]</td>
+          <td style="font-weight: 600;">${ds.dsn}</td>
+          <td>${ds.subsys}</td>
+          <td style="color: var(--color-phosphor-highlight);">${ds.status}</td>
+          <td style="color: var(--color-phosphor-dim);">${ds.impact}</td>
+        `;
+        tr.addEventListener('click', () => {
+          document.querySelectorAll('.ds-row').forEach(r => r.classList.remove('selected'));
+          tr.classList.add('selected');
+          showDatasetDetail(ds);
+          audioEngine.playDiskSeek();
+        });
+        dsTable.appendChild(tr);
+      });
+      // Set initial detail
+      if (RESUME_DATA.datasets.length > 0) {
+        showDatasetDetail(RESUME_DATA.datasets[0]);
+      }
+
+      // 4. Skills Grid
+      const skillsContainer = document.getElementById('skillsGridContainer');
+      skillsContainer.innerHTML = '';
+      for (const [category, items] of Object.entries(RESUME_DATA.technicalSkills)) {
+        const card = document.createElement('div');
+        card.className = 'skill-category-card';
+        card.innerHTML = `
+          <div class="skill-category-name">${category.toUpperCase()}</div>
+          <div class="skill-items-row">${items.join('  •  ')}</div>
+        `;
+        skillsContainer.appendChild(card);
+      }
+
+      // 5. Initial IPL Logs
+      runIplSequence();
+    }
+
+    function showDatasetDetail(ds) {
+      document.getElementById('projDetailTitle').innerText = `${ds.title} (${ds.subsys})`;
+      document.getElementById('projDetailContent').innerHTML = `
+        <div style="margin-bottom: 4px;"><span style="color: var(--color-phosphor-dim);">DSN:</span> <strong>${ds.dsn}</strong> | <span style="color: var(--color-phosphor-dim);">METRIC:</span> ${ds.impact}</div>
+        <div>${ds.spec}</div>
+      `;
+    }
+
+    function switchView(viewId) {
+      audioEngine.playKeyClick();
+      // Update buttons
+      document.querySelectorAll('.fkey-btn').forEach(btn => {
+        if (btn.dataset.view === viewId) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      // Update panels
+      document.querySelectorAll('.terminal-view-panel').forEach(p => {
+        p.classList.remove('active');
+      });
+      const target = document.getElementById(viewId);
+      if (target) {
+        target.classList.add('active');
+        target.scrollTop = 0;
+      }
+
+      // Camera cue towards rack if 3D scene exists
+      if (window.focusRackByView) {
+        window.focusRackByView(viewId);
+      }
+    }
+
+    // Function key event listeners
+    document.querySelectorAll('.fkey-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        switchView(btn.dataset.view);
+      });
+    });
+
+    // Real-time clock display
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0];
+      const el = document.getElementById('clockDisplay');
+      if (el) el.innerText = timeStr;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Copy to clipboard helper
+    function copyToClipboard(text) {
+      audioEngine.playKeyClick();
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+        showCliFeedback(`COPIED TO BUFFER: ${text}`);
+      }
+    }
+
+    function showCliFeedback(msg, isError = false) {
+      const fb = document.getElementById('cliFeedbackLine');
+      fb.innerText = msg;
+      fb.style.color = isError ? 'var(--color-alert)' : 'var(--color-warning)';
+      setTimeout(() => {
+        if (fb.innerText === msg) fb.innerText = '';
+      }, 4000);
+    }
+
+    // Direct contact form submit handler
+    function handleDispatchMessage(e) {
+      e.preventDefault();
+      audioEngine.playTerminalBell();
+      const name = document.getElementById('senderName').value;
+      const email = document.getElementById('senderEmail').value;
+      const msg = document.getElementById('senderMsg').value;
+      
+      const mailtoUrl = `mailto:${RESUME_DATA.personalInfo.email}?subject=Mainframe%20Opportunity%20from%20${encodeURIComponent(name)}&body=${encodeURIComponent(msg + '\n\nSender Email: ' + email)}`;
+      window.location.href = mailtoUrl;
+
+      document.getElementById('dispatchStatus').innerText = "TRANSMISSION DISPATCHED TO MAINFRAME OPERATOR ✓";
+      document.getElementById('contactDispatchForm').reset();
+    }
+
+    // IPL Diagnostic Log Generator
+    const IPL_STEPS = [
+      "06:20:01.000 IEA000I IPL COMPLETE - z/OS V2R5 HBB77C0 SUB=MSTR",
+      "06:20:01.042 IEE041I SYSTEM HAS INITIALIZED JES2 SUBSYSTEM",
+      "06:20:01.120 IEF196I IEF237I 0380 ALLOCATED TO COBOL.V6R4.SIGYCOMP",
+      "06:20:01.215 DSN3100I -DB2A DSN3INI1 DB2 SUBSYSTEM INITIALIZATION COMPLETE",
+      "06:20:01.350 DFS0430I IMS DB/DC ENVIRONMENT INITIALIZED READY FOR SPUFI/MQ",
+      "06:20:01.480 DFHKE0101 CICS REGION 'ANZPROD1' STARTED ON CPC Z16-8561",
+      "06:20:01.620 CSQY001I +MQ01 QUEUE MANAGER INITIALIZATION COMPLETED",
+      "06:20:01.780 HOGAN001I HOGAN CORE BANKING FPS & PCD TABLES LOADED (4,000,000 ACCOUNTS)",
+      "06:20:01.910 SPLK102I SPLUNK TELEMETRY DAEMON STREAMING TRANSACTION LOGS",
+      "06:20:02.000 RACF001I SECURITY CLEARANCE ESTABLISHED FOR OPERATOR: NIKHIL"
+    ];
+
+    function runIplSequence() {
+      const box = document.getElementById('iplLogBox');
+      box.innerHTML = '';
+      let i = 0;
+      function nextLine() {
+        if (i < IPL_STEPS.length) {
+          const div = document.createElement('div');
+          div.style.marginBottom = '3px';
+          div.innerText = IPL_STEPS[i];
+          if (IPL_STEPS[i].includes('COMPLETE') || IPL_STEPS[i].includes('READY')) {
+            div.style.color = 'var(--color-phosphor-highlight)';
+          }
+          box.appendChild(div);
+          box.scrollTop = box.scrollHeight;
+          audioEngine.playKeyClick();
+          i++;
+          setTimeout(nextLine, 120);
+        }
+      }
+      nextLine();
+    }
+
+    function clearIplLog() {
+      audioEngine.playKeyClick();
+      document.getElementById('iplLogBox').innerHTML = 'SYSTEM LOG CLEARED. RUN RE-TRIGGER TO REBOOT.';
+    }
+
+    // ==========================================
+    // 4. CLI COMMAND PROMPT INTERPRETER
+    // ==========================================
+    const cliInput = document.getElementById('cliInputField');
+    cliInput.addEventListener('keydown', (e) => {
+      audioEngine.playKeyClick();
+      if (e.key === 'Enter') {
+        const val = cliInput.value.trim().toUpperCase();
+        cliInput.value = '';
+        executeCliCommand(val);
+      }
+    });
+
+    function executeCliCommand(cmd) {
+      if (!cmd) return;
+      audioEngine.playDiskSeek();
+
+      if (cmd === 'HELP' || cmd === '?') {
+        showCliFeedback("COMMANDS: EXP, PROJ, SKILLS, CONTACT, EDU, CERT, IPL, THEME (GREEN/AMBER/CYAN), AUDIO (ON/OFF), CLEAR");
+      } else if (cmd === 'EXP' || cmd === 'EXPERIENCE' || cmd === 'SYS_LOG') {
+        switchView('view-experience');
+        showCliFeedback("ROUTED TO SYS_LOG (CAREER EXPERIENCE)");
+      } else if (cmd === 'PROJ' || cmd === 'PROJECTS' || cmd === 'DS_LIST') {
+        switchView('view-projects');
+        showCliFeedback("ROUTED TO DS_LIST (PROJECT INITIATIVES)");
+      } else if (cmd === 'SKILLS' || cmd === 'CONFIG' || cmd === 'TECH') {
+        switchView('view-skills');
+        showCliFeedback("ROUTED TO CONFIG (TECHNICAL STACK)");
+      } else if (cmd === 'CONTACT' || cmd === 'RACF' || cmd === 'AUTH') {
+        switchView('view-contact');
+        showCliFeedback("ROUTED TO RACF_AUTH (USER SECURITY CLEARANCE)");
+      } else if (cmd === 'EDU' || cmd === 'CERT' || cmd === 'ACADEMICS') {
+        switchView('view-education');
+        showCliFeedback("ROUTED TO SYS_ACADEMICS (EDUCATION & CERTIFICATIONS)");
+      } else if (cmd === 'IPL' || cmd === 'BOOT' || cmd === 'REBOOT') {
+        switchView('view-ipl');
+        runIplSequence();
+        showCliFeedback("EXECUTING INITIAL PROGRAM LOAD (IPL)...");
+      } else if (cmd.startsWith('THEME')) {
+        const parts = cmd.split(' ');
+        const theme = parts[1] ? parts[1].toLowerCase() : 'green';
+        setTheme(theme);
+      } else if (cmd === 'AUDIO ON') {
+        audioEngine.enabled = true;
+        updateAudioButton();
+        showCliFeedback("TERMINAL AUDIO SYNTHESIZER: ENABLED");
+      } else if (cmd === 'AUDIO OFF') {
+        audioEngine.enabled = false;
+        updateAudioButton();
+        showCliFeedback("TERMINAL AUDIO SYNTHESIZER: MUTED");
+      } else if (cmd === 'CLEAR' || cmd === 'CLS') {
+        showCliFeedback("COMMAND BUFFER REFRESHED");
+      } else {
+        audioEngine.playTerminalBell();
+        showCliFeedback(`COMMAND REJECTED: '${cmd}'. TYPE 'HELP' FOR VALID SYNTAX.`, true);
+      }
+    }
+
+    // Keyboard Shortcuts (F1 - F8)
+    window.addEventListener('keydown', (e) => {
+      // Don't intercept if typing in text inputs or textareas
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+        return;
+      }
+      if (e.key === 'F1') { e.preventDefault(); switchView('view-summary'); }
+      if (e.key === 'F3') { e.preventDefault(); switchView('view-experience'); }
+      if (e.key === 'F4') { e.preventDefault(); switchView('view-projects'); }
+      if (e.key === 'F5') { e.preventDefault(); switchView('view-skills'); }
+      if (e.key === 'F6') { e.preventDefault(); switchView('view-contact'); }
+      if (e.key === 'F7') { e.preventDefault(); switchView('view-education'); }
+      if (e.key === 'F8') { e.preventDefault(); switchView('view-ipl'); }
+    });
+
+    // Theme Switcher Logic
+    const THEMES = ['green', 'amber', 'cyan', 'white'];
+    const THEME_NAMES = { green: 'P39 GREEN', amber: 'P134 AMBER', cyan: 'CYAN 3279', white: 'MONOCHROME' };
+    let currentThemeIdx = 0;
+
+    function setTheme(theme) {
+      if (!THEMES.includes(theme)) theme = 'green';
+      document.body.dataset.theme = theme;
+      currentThemeIdx = THEMES.indexOf(theme);
+      document.getElementById('themeLabel').innerText = THEME_NAMES[theme];
+      showCliFeedback(`TERMINAL PALETTE SWITCHED: ${THEME_NAMES[theme]}`);
+      
+      // Update Three.js lighting if ready
+      if (window.updateSceneThemeColor) {
+        window.updateSceneThemeColor(theme);
+      }
+    }
+
+    document.getElementById('btnThemeToggle').addEventListener('click', () => {
+      audioEngine.playKeyClick();
+      currentThemeIdx = (currentThemeIdx + 1) % THEMES.length;
+      setTheme(THEMES[currentThemeIdx]);
+    });
+
+    // Audio Button Toggle
+    function updateAudioButton() {
+      const icon = document.getElementById('audioIcon');
+      const label = document.getElementById('audioLabel');
+      if (audioEngine.enabled) {
+        icon.innerText = '🔊';
+        label.innerText = 'AUDIO: ON';
+      } else {
+        icon.innerText = '🔇';
+        label.innerText = 'AUDIO: OFF';
+      }
+    }
+
+    document.getElementById('btnAudioToggle').addEventListener('click', () => {
+      audioEngine.enabled = !audioEngine.enabled;
+      audioEngine.playKeyClick();
+      updateAudioButton();
+      showCliFeedback(`AUDIO ${audioEngine.enabled ? 'ACTIVATED' : 'MUTED'}`);
+    });
+
+    // Window Minimize / Maximize / HUD Mode Controls
+    const crtContainer = document.getElementById('crtContainer');
+    const btnMinimize = document.getElementById('btnMinimize');
+    const btnMaximize = document.getElementById('btnMaximize');
+    const btnModeToggle = document.getElementById('btnModeToggle');
+    const viewModeLabel = document.getElementById('viewModeLabel');
+
+    btnMinimize.addEventListener('click', () => {
+      audioEngine.playKeyClick();
+      if (crtContainer.classList.contains('mode-minimized')) {
+        crtContainer.classList.remove('mode-minimized');
+        crtContainer.classList.add('mode-hud');
+        btnMinimize.innerText = '_';
+      } else {
+        crtContainer.classList.remove('mode-maximized');
+        crtContainer.classList.add('mode-minimized');
+        btnMinimize.innerText = '▲';
+      }
+    });
+
+    function toggleFullscreenCrt() {
+      audioEngine.playKeyClick();
+      if (crtContainer.classList.contains('mode-maximized')) {
+        crtContainer.classList.remove('mode-maximized');
+        crtContainer.classList.add('mode-hud');
+        btnMaximize.innerText = '□';
+        viewModeLabel.innerText = 'FULL TERMINAL';
+      } else {
+        crtContainer.classList.remove('mode-minimized');
+        crtContainer.classList.add('mode-maximized');
+        btnMaximize.innerText = '❐';
+        viewModeLabel.innerText = '3D ROOM VIEW';
+      }
+    }
+
+    btnMaximize.addEventListener('click', toggleFullscreenCrt);
+    btnModeToggle.addEventListener('click', toggleFullscreenCrt);
+
+    // Initialize HTML DOM
+    initializeTerminalContent();
+
+    // ==========================================
+    // 5. THREE.JS 3D SCENE (Dark Mainframe Room)
+    // ==========================================
+    (function initThreeScene() {
+      const container = document.getElementById('webgl-canvas-container');
+      const canvas = document.getElementById('canvas3d');
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x06080b);
+      scene.fog = new THREE.FogExp2(0x06080b, 0.045);
+
+      const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+      const defaultCamPos = new THREE.Vector3(0, 3.2, 7.5);
+      const defaultCamTarget = new THREE.Vector3(0, 1.4, 0);
+      camera.position.copy(defaultCamPos);
+
+      const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: "high-performance" });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      // Controls
+      let controls = null;
+      if (window.THREE && window.THREE.OrbitControls) {
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05; // Don't dip below floor
+        controls.minDistance = 2.5;
+        controls.maxDistance = 14;
+        controls.target.copy(defaultCamTarget);
+      }
+
+      // Lights
+      const ambientLight = new THREE.AmbientLight(0x182028, 1.2);
+      scene.add(ambientLight);
+
+      // Main ceiling overhead cold fluorescent fixture
+      const ceilingLight = new THREE.DirectionalLight(0xb0d0e6, 0.9);
+      ceilingLight.position.set(0, 10, 4);
+      ceilingLight.castShadow = true;
+      ceilingLight.shadow.mapSize.width = 1024;
+      ceilingLight.shadow.mapSize.height = 1024;
+      scene.add(ceilingLight);
+
+      // Terminal Screen Phosphor Light Glow
+      const terminalPointLight = new THREE.PointLight(0x00ff66, 2.5, 4.5);
+      terminalPointLight.position.set(0, 1.6, 1.5);
+      scene.add(terminalPointLight);
+
+      // Server Rack Glow Light (Dynamic)
+      const rackPointLight = new THREE.PointLight(0x00e5ff, 1.8, 6.0);
+      rackPointLight.position.set(0, 2.2, -1.8);
+      scene.add(rackPointLight);
+
+      // Floor (Raised Access Computer Room Tiles 60x60cm)
+      const floorSize = 24;
+      const floorGeo = new THREE.PlaneGeometry(floorSize, floorSize, 40, 40);
+      const floorMat = new THREE.MeshStandardMaterial({
+        color: 0x11161d,
+        roughness: 0.72,
+        metalness: 0.28
+      });
+      const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+      floorMesh.rotation.x = -Math.PI / 2;
+      floorMesh.receiveShadow = true;
+      scene.add(floorMesh);
+
+      // Floor Tile Grid Lines (Visual Raised Floor)
+      const gridHelper = new THREE.GridHelper(floorSize, 40, 0x00ff66, 0x1f2b38);
+      gridHelper.position.y = 0.005;
+      gridHelper.material.opacity = 0.28;
+      gridHelper.material.transparent = true;
+      scene.add(gridHelper);
+
+      // Background Cable Ducts / Overhead Cable Ladders
+      const ductMat = new THREE.MeshStandardMaterial({ color: 0x1a212b, roughness: 0.8, metalness: 0.4 });
+      for (let z = -4; z <= 2; z += 3) {
+        const ladderGeo = new THREE.BoxGeometry(14, 0.15, 0.6);
+        const ladder = new THREE.Mesh(ladderGeo, ductMat);
+        ladder.position.set(0, 4.6, z);
+        scene.add(ladder);
+      }
+
+      // ------------------------------------------
+      // Server Racks Construction (Low-Poly Mainframes)
+      // ------------------------------------------
+      const interactiveObjects = [];
+      const blinkingLeds = [];
+
+      const rackConfigs = [
+        { id: 'rack-exp', name: 'SYS_LOG (EXPERIENCE)', viewId: 'view-experience', x: -3.8, z: -1.6, color: 0x00ff66 },
+        { id: 'rack-proj', name: 'DS_LIST (PROJECTS & DATASETS)', viewId: 'view-projects', x: -1.9, z: -2.3, color: 0x00e5ff },
+        { id: 'rack-config', name: 'CONFIG (TECHNICAL SKILLS)', viewId: 'view-skills', x: 0.0, z: -2.7, color: 0x00ff66 },
+        { id: 'rack-racf', name: 'RACF_AUTH (SECURITY & CONTACT)', viewId: 'view-contact', x: 1.9, z: -2.3, color: 0xffb000 },
+        { id: 'rack-edu', name: 'SYS_ACADEMICS (EDU & CERTS)', viewId: 'view-education', x: 3.8, z: -1.6, color: 0x00e5ff }
+      ];
+
+      const rackFrameMat = new THREE.MeshStandardMaterial({ color: 0x15191f, roughness: 0.5, metalness: 0.6 });
+      const rackDoorMat = new THREE.MeshStandardMaterial({ color: 0x0e1115, roughness: 0.6, metalness: 0.5 });
+      const serverUnitMat = new THREE.MeshStandardMaterial({ color: 0x242d38, roughness: 0.4, metalness: 0.7 });
+
+      rackConfigs.forEach((cfg) => {
+        const rackGroup = new THREE.Group();
+        rackGroup.position.set(cfg.x, 0, cfg.z);
+        rackGroup.userData = { isRack: true, viewId: cfg.viewId, name: cfg.name };
+
+        // Outer Cabinet (IBM Mainframe frame)
+        const frameGeo = new THREE.BoxGeometry(1.4, 3.4, 1.1);
+        const frameMesh = new THREE.Mesh(frameGeo, rackFrameMat);
+        frameMesh.position.y = 1.7;
+        frameMesh.castShadow = true;
+        frameMesh.receiveShadow = true;
+        rackGroup.add(frameMesh);
+
+        // Rack Front Glass/Mesh Inset Panel
+        const panelGeo = new THREE.BoxGeometry(1.22, 3.1, 0.08);
+        const panelMesh = new THREE.Mesh(panelGeo, rackDoorMat);
+        panelMesh.position.set(0, 1.7, 0.54);
+        rackGroup.add(panelMesh);
+
+        // Server Blades / Tape Units with LEDs
+        const bladeCount = 7;
+        for (let b = 0; b < bladeCount; b++) {
+          const bladeY = 0.5 + b * 0.42;
+          const bladeGeo = new THREE.BoxGeometry(1.15, 0.32, 0.06);
+          const bladeMesh = new THREE.Mesh(bladeGeo, serverUnitMat);
+          bladeMesh.position.set(0, bladeY, 0.57);
+          rackGroup.add(bladeMesh);
+
+          // LED Array on each blade
+          for (let l = 0; l < 5; l++) {
+            const ledGeo = new THREE.BoxGeometry(0.04, 0.04, 0.02);
+            const ledMat = new THREE.MeshBasicMaterial({
+              color: (l % 2 === 0 ? cfg.color : 0xffaa00)
+            });
+            const ledMesh = new THREE.Mesh(ledGeo, ledMat);
+            ledMesh.position.set(-0.45 + l * 0.12, bladeY, 0.61);
+            rackGroup.add(ledMesh);
+
+            blinkingLeds.push({
+              mesh: ledMesh,
+              baseColor: ledMat.color.clone(),
+              speed: 2 + Math.random() * 8,
+              offset: Math.random() * 10
+            });
+          }
+        }
+
+        // Top Status Light Bar on Mainframe
+        const topBarGeo = new THREE.BoxGeometry(1.1, 0.12, 0.05);
+        const topBarMat = new THREE.MeshBasicMaterial({ color: cfg.color });
+        const topBarMesh = new THREE.Mesh(topBarGeo, topBarMat);
+        topBarMesh.position.set(0, 3.25, 0.56);
+        rackGroup.add(topBarMesh);
+
+        // Reel-to-reel magnetic tape deck on middle rack (CONFIG)
+        if (cfg.id === 'rack-config') {
+          const reelMat = new THREE.MeshStandardMaterial({ color: 0x8899aa, metalness: 0.9, roughness: 0.2 });
+          const tapeReel1 = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.04, 20), reelMat);
+          tapeReel1.rotation.x = Math.PI / 2;
+          tapeReel1.position.set(-0.25, 2.6, 0.62);
+          rackGroup.add(tapeReel1);
+
+          const tapeReel2 = tapeReel1.clone();
+          tapeReel2.position.set(0.25, 2.6, 0.62);
+          rackGroup.add(tapeReel2);
+
+          rackGroup.userData.tapeReels = [tapeReel1, tapeReel2];
+        }
+
+        scene.add(rackGroup);
+        interactiveObjects.push(rackGroup);
+      });
+
+      // ------------------------------------------
+      // Foreground Workstation (Desk + IBM 3278 CRT + Keyboard)
+      // ------------------------------------------
+      const deskGroup = new THREE.Group();
+      deskGroup.position.set(0, 0, 1.4);
+
+      // Desk Tabletop
+      const deskTopGeo = new THREE.BoxGeometry(2.2, 0.08, 1.2);
+      const deskMat = new THREE.MeshStandardMaterial({ color: 0x222a33, roughness: 0.6, metalness: 0.3 });
+      const deskTop = new THREE.Mesh(deskTopGeo, deskMat);
+      deskTop.position.set(0, 0.9, 0);
+      deskTop.castShadow = true;
+      deskTop.receiveShadow = true;
+      deskGroup.add(deskTop);
+
+      // Desk Metal Legs
+      const legMat = new THREE.MeshStandardMaterial({ color: 0x14181d, roughness: 0.4, metalness: 0.8 });
+      [[-0.95, -0.45], [0.95, -0.45], [-0.95, 0.45], [0.95, 0.45]].forEach(([lx, lz]) => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.9, 12), legMat);
+        leg.position.set(lx, 0.45, lz);
+        leg.castShadow = true;
+        deskGroup.add(leg);
+      });
+
+      // IBM 3278 Monitor Housing
+      const monitorGroup = new THREE.Group();
+      monitorGroup.position.set(0, 0.94, -0.15);
+
+      // CRT Case
+      const caseMat = new THREE.MeshStandardMaterial({ color: 0x2b333c, roughness: 0.5, metalness: 0.2 });
+      const crtCase = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.68, 0.72), caseMat);
+      crtCase.position.set(0, 0.42, 0);
+      crtCase.castShadow = true;
+      monitorGroup.add(crtCase);
+
+      // Curved Monitor Bezel
+      const bezelGeo = new THREE.BoxGeometry(0.72, 0.52, 0.06);
+      const bezelMat = new THREE.MeshStandardMaterial({ color: 0x161a1f, roughness: 0.4 });
+      const bezelMesh = new THREE.Mesh(bezelGeo, bezelMat);
+      bezelMesh.position.set(0, 0.42, 0.35);
+      monitorGroup.add(bezelMesh);
+
+      // Glowing CRT Screen Face
+      const screenGeo = new THREE.PlaneGeometry(0.62, 0.44);
+      const screenMat = new THREE.MeshBasicMaterial({ color: 0x00ff66 });
+      const screenMesh = new THREE.Mesh(screenGeo, screenMat);
+      screenMesh.position.set(0, 0.42, 0.385);
+      monitorGroup.add(screenMesh);
+      deskGroup.add(monitorGroup);
+
+      // IBM Vintage Beam-Spring Keyboard
+      const kbGeo = new THREE.BoxGeometry(0.78, 0.05, 0.3);
+      const kbMat = new THREE.MeshStandardMaterial({ color: 0x363d47, roughness: 0.6 });
+      const kbMesh = new THREE.Mesh(kbGeo, kbMat);
+      kbMesh.position.set(0, 0.95, 0.32);
+      kbMesh.rotation.x = 0.1;
+      kbMesh.castShadow = true;
+      deskGroup.add(kbMesh);
+
+      deskGroup.userData = { isWorkstation: true, viewId: 'view-summary', name: 'IBM 3279 TERMINAL WORKSTATION' };
+      scene.add(deskGroup);
+      interactiveObjects.push(deskGroup);
+
+      // ------------------------------------------
+      // Raycasting Interaction (Hover & Click Racks)
+      // ------------------------------------------
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+      let hoveredObj = null;
+      const hudHint = document.getElementById('hudInteractiveHint');
+
+      window.addEventListener('mousemove', (e) => {
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(scene.children, true);
+
+        let hitInteractive = null;
+        for (let hit of intersects) {
+          let curr = hit.object;
+          while (curr && curr.parent && curr.parent !== scene) {
+            if (curr.userData && (curr.userData.isRack || curr.userData.isWorkstation)) {
+              hitInteractive = curr;
+              break;
+            }
+            curr = curr.parent;
+          }
+          if (hitInteractive) break;
+        }
+
+        if (hitInteractive) {
+          document.body.style.cursor = 'pointer';
+          hoveredObj = hitInteractive;
+          hudHint.innerHTML = `TARGET: <strong>${hitInteractive.userData.name}</strong> — CLICK TO MOUNT PARTITION`;
+          hudHint.style.borderColor = 'var(--color-phosphor-highlight)';
+        } else {
+          document.body.style.cursor = 'default';
+          hoveredObj = null;
+          hudHint.innerHTML = `💡 TIP: Drag to orbit scene. Click server racks in 3D or function keys [F3–F8] below to load partitions.`;
+          hudHint.style.borderColor = 'var(--color-phosphor-dim)';
+        }
+      });
+
+      window.addEventListener('click', (e) => {
+        // If clicking on HUD overlay elements, ignore 3D raycast
+        if (e.target.closest('#crtContainer') || e.target.closest('.top-actions') || e.target.closest('.viewport-hud')) {
+          return;
+        }
+
+        if (hoveredObj && hoveredObj.userData.viewId) {
+          switchView(hoveredObj.userData.viewId);
+        }
+      });
+
+      // Smooth Camera Lerp on Rack Focus
+      let targetCameraPos = defaultCamPos.clone();
+      let targetControlsTarget = defaultCamTarget.clone();
+
+      window.focusRackByView = function(viewId) {
+        const found = rackConfigs.find(c => c.viewId === viewId);
+        if (found) {
+          targetCameraPos.set(found.x * 0.7, 2.4, found.z + 4.8);
+          targetControlsTarget.set(found.x, 1.7, found.z);
+        } else {
+          targetCameraPos.copy(defaultCamPos);
+          targetControlsTarget.copy(defaultCamTarget);
+        }
+      };
+
+      document.getElementById('btnCameraReset').addEventListener('click', () => {
+        audioEngine.playKeyClick();
+        targetCameraPos.copy(defaultCamPos);
+        targetControlsTarget.copy(defaultCamTarget);
+        if (controls) {
+          controls.target.copy(defaultCamTarget);
+        }
+        showCliFeedback("3D SCENE CAMERA RETURNED TO COCKPIT ORIGIN");
+      });
+
+      // Dynamic Theme Color Updater for 3D Lights
+      window.updateSceneThemeColor = function(theme) {
+        let col = 0x00ff66;
+        if (theme === 'amber') col = 0xffb000;
+        if (theme === 'cyan') col = 0x00e5ff;
+        if (theme === 'white') col = 0xffffff;
+
+        terminalPointLight.color.setHex(col);
+        screenMesh.material.color.setHex(col);
+        gridHelper.material.color.setHex(col);
+      };
+
+      // Animation Loop
+      const clock = new THREE.Clock();
+
+      function animate() {
+        requestAnimationFrame(animate);
+        const elapsedTime = clock.getElapsedTime();
+
+        // Blink LEDs
+        blinkingLeds.forEach((led) => {
+          const val = Math.sin(elapsedTime * led.speed + led.offset);
+          if (val > 0.4) {
+            led.mesh.material.color.copy(led.baseColor);
+          } else {
+            led.mesh.material.color.setHex(0x050a0f);
+          }
+        });
+
+        // Rotate tape reels if present
+        interactiveObjects.forEach((obj) => {
+          if (obj.userData.tapeReels) {
+            obj.userData.tapeReels[0].rotation.z += 0.04;
+            obj.userData.tapeReels[1].rotation.z += 0.035;
+          }
+        });
+
+        // Smooth camera lerp
+        if (camera.position.distanceTo(targetCameraPos) > 0.01) {
+          camera.position.lerp(targetCameraPos, 0.04);
+        }
+        if (controls) {
+          controls.target.lerp(targetControlsTarget, 0.04);
+          controls.update();
+        }
+
+        renderer.render(scene, camera);
+      }
+
+      animate();
+
+      // Window Resize Listener
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    })();
+  </script>
+</body>
+</html>

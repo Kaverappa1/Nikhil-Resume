@@ -1,0 +1,6 @@
+{
+  "name": "Nikhil Kaverappa - Mainframe 3270 Terminal",
+  "description": "Interactive 3D IBM Mainframe terminal workstation and 3270 CRT console portfolio for Nikhil Kaverappa N L, Mainframe Developer & BFSI Core Banking Specialist.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
